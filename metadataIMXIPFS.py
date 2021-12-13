@@ -1,0 +1,119 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+import pandas as pd
+import numpy as np
+import time
+import os
+from progressbar import progressbar
+import json
+from copy import deepcopy
+
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+
+# Base metadata. MUST BE EDITED.
+BASE_IMAGE_URL = "https://ipfs.gaspardetjoseph.fr/ipfs/QmZYiNE9F7HR7Xq5kS1sX289DyYh43RZu9Vn5DYiqaB643"
+BASE_NAME = "L'Artisan Français #"
+
+BASE_JSON = {
+    "id": "",
+    "name": BASE_NAME,
+    "description": "Sorti le 18 décembre 2021 à 19.99€ (0.005 ETH), l’Artisan Français est le premier NFT de Gaspard & Joseph. Il s’agit de 150 variantes du logo de G&J uniques et autogénérés avec des attributs issus de la culture française. Créé et édité par Gaspard & Joseph, l’Artisan offre des avantages exclusifs à ses détenteurs sur certains drops et réserve bien d’autres surprises… Gaspard & Joseph™",
+    "number_of_mints": "150",
+    "image_url": BASE_IMAGE_URL,
+    "external_url": "https://gaspardetjoseph.fr",
+    "editor": "Gaspard & Joseph",
+    "domain": "Generative Art",
+    "type": "png",
+    "minting_date": "18/12/2021",
+    "collection": "Drop 0",
+    "rarity": "Unique",
+    "creator": "Gaspard & Joseph",
+    "season": "Season 1",
+}
+
+# Get metadata and JSON files path based on edition
+def generate_paths(edition_name):
+    edition_path = os.path.join('output', 'edition ' + str(edition_name))
+    metadata_path = os.path.join(edition_path, 'metadata.csv')
+    json_path = os.path.join(edition_path, 'jsonIMX_Pinata')
+
+    return edition_path, metadata_path, json_path
+
+# Function to convert snake case to sentence case
+
+
+
+
+
+# Function to get attribure metadata
+def get_attribute_metadata(metadata_path):
+
+    # Read attribute data from metadata file
+    df = pd.read_csv(metadata_path)
+    df = df.drop('Unnamed: 0', axis=1)
+
+    # Get zfill count based on number of images generated
+    zfill_count = len(str(df.shape[1]))
+
+    return df, zfill_count
+
+# Main function that generates the JSON metadata
+
+
+def main():
+
+    # Get edition name
+    print("Enter edition you want to generate metadata for: ")
+    while True:
+        edition_name = input()
+        edition_path, metadata_path, json_path = generate_paths(edition_name)
+
+        if os.path.exists(edition_path):
+            print("Edition exists! Generating JSON metadata...")
+            break
+        else:
+            print("Oops! Looks like this edition doesn't exist! Check your output folder to see what editions exist.")
+            print("Enter edition you want to generate metadata for: ")
+            continue
+
+    # Make json folder
+    if not os.path.exists(json_path):
+        os.makedirs(json_path)
+
+    # Get attribute data and zfill count
+    df, zfill_count = get_attribute_metadata(metadata_path)
+
+    for idx, row in progressbar(df.iterrows()):
+
+        # Get a copy of the base JSON (python dict)
+        item_json = deepcopy(BASE_JSON)
+
+        item_json['id'] = str(idx + 1)
+        # Append number to base name
+        item_json['name'] = item_json['name'] + str(idx + 1)
+
+        # Append image PNG file name to base image path
+        item_json['image_url'] = item_json['image_url'] + \
+            '/' + str(idx + 1).zfill(zfill_count) + '.png'
+
+        # Convert pandas series to dictionary
+        attr_dict = dict(row)
+
+        # Add all existing traits to attributes dictionary
+        for attr in attr_dict:
+
+            if attr_dict[attr] != 'none' and attr != 'face' and attr != 'background':
+                item_json[attr] = attr_dict[attr]
+
+        # Write file to json folder
+         # Write file to json folder
+        item_json_path = os.path.join(json_path, str(idx + 1))
+        with open(item_json_path, 'w') as f:
+            json.dump(item_json, f)
+
+
+# Run the main function
+main()
